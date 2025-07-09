@@ -36772,7 +36772,7 @@ function compareVersions(current, previous) {
   
   // Same base version, compare build numbers
   if (currentParsed.build > previousParsed.build) return 1;
-  if (currentParsed.build <= previousParsed.build) return -1;
+  if (currentParsed.build < previousParsed.build) return -1;
   return 0;
 }
 

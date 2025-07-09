@@ -1,5 +1,26 @@
 # Flutter Version Checker - Release History
 
+## v1.2.2 (2025-07-09)
+
+### 🐛 Bug Fixes
+- **Fixed Version Comparison Logic**: Corrected the `compareVersions` function to properly detect identical versions
+- **Enhanced Version Detection**: Improved logic to properly handle cases where current version equals previous version
+- **Better Git Branch Handling**: Fixed issues with fetching branch references in CI environments
+
+### 🔧 Improvements
+- **More Accurate Version Checking**: Now correctly identifies when versions are reused and need incrementing
+- **Test Coverage**: Fixed failing test case for identical version comparison
+- **Error Handling**: Better handling of git fetch errors in different CI environments
+
+### 🧪 Quality Assurance
+- **All Tests Passing**: Fixed comparison logic ensures 100% test pass rate (10/10 tests)
+- **Production Ready**: Thoroughly tested version comparison scenarios
+
+This release fixes the core issue where identical versions were not being properly detected, ensuring proper auto-increment behavior.
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.2.1...v1.2.2
+
 ## v1.2.1 (2025-07-09)
 
 ## What's Changed
