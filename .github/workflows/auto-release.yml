@@ -125,8 +125,29 @@ jobs:
     
     - name: Commit Updated CHANGES.md
       run: |
+        VERSION=${{ steps.version.outputs.version }}
+        
+        # Configure git
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Get the default branch name
+        DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+        echo "Default branch: $DEFAULT_BRANCH"
+        
+        # Check if CHANGES.md was actually modified
+        if git diff --quiet CHANGES.md; then
+          echo "No changes to CHANGES.md, skipping commit"
+          exit 0
+        fi
+        
+        # Switch to the default branch
+        git fetch origin
+        git checkout $DEFAULT_BRANCH
+        
+        # Add and commit changes
         git add CHANGES.md
-        git commit -m "Auto-update CHANGES.md for ${{ steps.version.outputs.version }}" || exit 0
-        git push origin main || git push origin master
+        git commit -m "Auto-update CHANGES.md for $VERSION [skip ci]"
+        
+        # Push changes
+        git push origin $DEFAULT_BRANCH
