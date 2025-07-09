@@ -1,0 +1,42 @@
+{
+  "name": "flutter-version-checker",
+  "version": "1.1.0",
+  "description": "A GitHub Action to check and auto-increment Flutter version numbers in pubspec.yaml",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.js -o dist --source-map --license licenses.txt",
+    "package": "npm run build",
+    "test": "jest",
+    "start": "node src/index.js",
+    "changelog": "git log --oneline --pretty=format:'- %s (%h)' HEAD~10..HEAD",
+    "release": "npm run build && npm test"
+  },
+  "keywords": [
+    "github-action",
+    "flutter",
+    "version",
+    "pubspec",
+    "ci-cd"
+  ],
+  "author": "Abd Alrahman Kanawati",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Abdo-ka/flutter-version-checker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Abdo-ka/flutter-version-checker/issues"
+  },
+  "homepage": "https://github.com/Abdo-ka/flutter-version-checker#readme",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.1",
+    "js-yaml": "^4.1.0",
+    "semver": "^7.7.2"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3",
+    "jest": "^29.7.0"
+  }
+}

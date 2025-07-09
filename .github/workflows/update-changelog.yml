@@ -1,0 +1,102 @@
+name: Update Release Notes
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'package.json'
+      - 'pubspec.yaml'
+  workflow_dispatch:
+
+jobs:
+  update-changes:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Check for Version Changes
+      id: version-check
+      run: |
+        # Get current version from package.json
+        CURRENT_VERSION=$(grep '"version"' package.json | head -1 | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+        echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        
+        # Check if this is a version bump commit
+        COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+        if echo "$COMMIT_MSG" | grep -q -i "version\|release\|bump"; then
+          echo "version-changed=true" >> $GITHUB_OUTPUT
+          echo "Version change detected: $CURRENT_VERSION"
+        else
+          echo "version-changed=false" >> $GITHUB_OUTPUT
+          echo "No version change detected"
+        fi
+    
+    - name: Generate Changelog Entry
+      if: steps.version-check.outputs.version-changed == 'true'
+      run: |
+        VERSION=${{ steps.version-check.outputs.current-version }}
+        DATE=$(date +"%Y-%m-%d")
+        
+        echo "Generating changelog for version $VERSION"
+        
+        # Get recent commits for this version
+        COMMITS=$(git log --oneline -10 --pretty=format:"- %s")
+        
+        # Create new changelog entry
+        cat > new-entry.md << EOF
+        
+        ## v$VERSION ($DATE)
+        
+        ### Changes in this release:
+        $COMMITS
+        
+        ### Key Features:
+        - Professional Flutter version management
+        - Automatic version increment and tagging
+        - Branch history validation
+        - Seamless CI/CD integration
+        
+        EOF
+        
+        # Prepend to existing CHANGES.md if it exists
+        if [ -f CHANGES.md ]; then
+          # Find the insertion point (after the first header)
+          if grep -q "## Latest Changes" CHANGES.md; then
+            # Insert after "Latest Changes" section
+            sed '/## Latest Changes/r new-entry.md' CHANGES.md > temp-changes.md
+          elif grep -q "## Previous Changes" CHANGES.md; then
+            # Insert before "Previous Changes" section
+            sed '/## Previous Changes/i\\n## Latest Changes (v'$VERSION')\n' CHANGES.md > temp-changes.md
+            sed -i '/## Latest Changes/r new-entry.md' temp-changes.md
+          else
+            # Prepend to the file
+            echo "# Flutter Version Checker - Release History" > temp-changes.md
+            cat new-entry.md >> temp-changes.md
+            echo "" >> temp-changes.md
+            cat CHANGES.md >> temp-changes.md
+          fi
+          mv temp-changes.md CHANGES.md
+        else
+          echo "# Flutter Version Checker - Release History" > CHANGES.md
+          cat new-entry.md >> CHANGES.md
+        fi
+    
+    - name: Commit Changes
+      if: steps.version-check.outputs.version-changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Release Bot"
+        
+        if git diff --quiet CHANGES.md; then
+          echo "No changes to commit"
+        else
+          git add CHANGES.md
+          git commit -m "Auto-update CHANGES.md for v${{ steps.version-check.outputs.current-version }} [skip ci]"
+          git push
+          echo "CHANGES.md updated and committed"
+        fi

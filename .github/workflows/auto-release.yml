@@ -1,0 +1,121 @@
+name: Auto-Generate Release Changes
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to generate changes for'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  generate-changes:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Get Version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION=${{ github.event.inputs.version }}
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+    
+    - name: Generate Release Notes
+      id: release-notes
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+        
+        echo "Generating release notes for $VERSION"
+        echo "Previous tag: $PREVIOUS_TAG"
+        
+        # Create release notes file
+        cat > release-notes.md << EOF
+        # Release $VERSION
+        
+        ## What's Changed
+        
+        EOF
+        
+        # Get commits since last tag
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "### Commits since $PREVIOUS_TAG:" >> release-notes.md
+          git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> release-notes.md
+        else
+          echo "### All commits:" >> release-notes.md
+          git log --pretty=format:"- %s (%h)" >> release-notes.md
+        fi
+        
+        echo "" >> release-notes.md
+        echo "" >> release-notes.md
+        echo "## Features" >> release-notes.md
+        git log --pretty=format:"%s" $PREVIOUS_TAG..HEAD | grep -i "feat\|add\|new" | sed 's/^/- /' >> release-notes.md || echo "- No new features" >> release-notes.md
+        
+        echo "" >> release-notes.md
+        echo "## Bug Fixes" >> release-notes.md
+        git log --pretty=format:"%s" $PREVIOUS_TAG..HEAD | grep -i "fix\|bug\|resolve" | sed 's/^/- /' >> release-notes.md || echo "- No bug fixes" >> release-notes.md
+        
+        echo "" >> release-notes.md
+        echo "## Improvements" >> release-notes.md
+        git log --pretty=format:"%s" $PREVIOUS_TAG..HEAD | grep -i "improve\|enhance\|update\|refactor" | sed 's/^/- /' >> release-notes.md || echo "- No improvements" >> release-notes.md
+        
+        echo "" >> release-notes.md
+        echo "---" >> release-notes.md
+        echo "**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/$PREVIOUS_TAG...$VERSION" >> release-notes.md
+    
+    - name: Update CHANGES.md
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        DATE=$(date +"%Y-%m-%d")
+        
+        # Create temporary file with new changes
+        cat > temp-changes.md << EOF
+        # Flutter Version Checker - Release History
+        
+        ## $VERSION ($DATE)
+        
+        $(cat release-notes.md | tail -n +3)
+        
+        EOF
+        
+        # If CHANGES.md exists, append old content
+        if [ -f CHANGES.md ]; then
+          echo "" >> temp-changes.md
+          # Skip the first line (title) of existing CHANGES.md
+          tail -n +2 CHANGES.md >> temp-changes.md
+        fi
+        
+        # Replace CHANGES.md
+        mv temp-changes.md CHANGES.md
+    
+    - name: Create GitHub Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        release_name: Release ${{ steps.version.outputs.version }}
+        body_path: release-notes.md
+        draft: false
+        prerelease: false
+    
+    - name: Commit Updated CHANGES.md
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add CHANGES.md
+        git commit -m "Auto-update CHANGES.md for ${{ steps.version.outputs.version }}" || exit 0
+        git push origin main || git push origin master

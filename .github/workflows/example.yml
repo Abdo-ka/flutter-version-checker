@@ -1,0 +1,46 @@
+name: Flutter Version Check and Auto-Increment
+
+on:
+  push:
+    branches: [ main, release/*, develop ]
+  pull_request:
+    branches: [ main, release/*, develop ]
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Check and Auto-Increment Flutter Version
+      id: version-check
+      uses: ./
+      with:
+        branch: ${{ github.ref_name }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'Auto-increment version [skip ci]'
+      
+    - name: Display Results
+      run: |
+        echo "Previous Version: ${{ steps.version-check.outputs.previous-version }}"
+        echo "Current Version: ${{ steps.version-check.outputs.current-version }}"
+        echo "Version Updated: ${{ steps.version-check.outputs.version-updated }}"
+        if [ "${{ steps.version-check.outputs.version-updated }}" = "true" ]; then
+          echo "New Version: ${{ steps.version-check.outputs.new-version }}"
+        fi
+    
+    - name: Continue with CI/CD
+      if: success()
+      run: |
+        echo "Version check passed! Continuing with CI/CD pipeline..."
+        echo "Current version: ${{ steps.version-check.outputs.current-version }}"
+        # Add your subsequent CI/CD steps here
+        # For example:
+        # - Flutter build
+        # - Running tests
+        # - Deployment steps
