@@ -2,6 +2,30 @@
 
 ## v1.2.1 (2025-07-09)
 
+## What's Changed
+
+### Commits since v1.2.0:
+- 🚀 Release v1.2.1 (e63ec01)
+- Merge branch 'main' of github-personal:Abdo-ka/flutter-version-checker (b2263c0)
+- fix: Update version comparison logic and remove deprecated workflow examples (c6a5cf8)
+- Auto-update CHANGES.md for v1.2.0 [skip ci] (cb7c39e)
+
+## Features
+
+## Bug Fixes
+- fix: Update version comparison logic and remove deprecated workflow examples
+
+## Improvements
+- fix: Update version comparison logic and remove deprecated workflow examples
+- Auto-update CHANGES.md for v1.2.0 [skip ci]
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.2.0...v1.2.1
+
+
+
+## v1.2.1 (2025-07-09)
+
 ### 📚 Documentation & Examples
 - Added comprehensive workflow examples for Flutter CI/CD integration
 - Created fixed staging workflow example
