@@ -1,6 +1,6 @@
 {
   "name": "flutter-version-checker",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A GitHub Action to check and auto-increment Flutter version numbers in pubspec.yaml",
   "main": "dist/index.js",
   "scripts": {
