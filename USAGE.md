@@ -1,6 +1,6 @@
 # Usage Guide
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Add the Action to Your Workflow
 
@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Important: Get full git history
         token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Check Flutter Version
@@ -28,19 +28,32 @@ jobs:
       with:
         branch: ${{ github.ref_name }}
         token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "🚀 Auto-increment version [skip ci]"
+    
+    # The action will automatically:
+    # ✅ Check current version against branch history
+    # ✅ Auto-increment if needed
+    # ✅ Commit and push changes
+    # ✅ Create version tags
+    
+    - name: Show version info
+      run: |
+        echo "Current version: ${{ steps.version-check.outputs.current-version }}"
+        echo "Version updated: ${{ steps.version-check.outputs.version-updated }}"
     
     # Continue with your Flutter build...
 ```
 
-### 2. Repository Setup
+### 2. Repository Setup Requirements
 
 Ensure your repository has:
 
-- A `pubspec.yaml` file with a version field
-- Proper Git history with previous commits
-- GitHub token permissions for pushing (automatic with `GITHUB_TOKEN`)
+- ✅ A `pubspec.yaml` file with a version field (e.g., `version: 1.0.0+1`)
+- ✅ Proper Git history with previous commits
+- ✅ GitHub token permissions for pushing (automatic with `GITHUB_TOKEN`)
+- ✅ Workflow permissions to write to repository
 
-## Real-World Scenarios
+## 🎯 Real-World Scenarios
 
 ### Scenario 1: Production Release Pipeline
 

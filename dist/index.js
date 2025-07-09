@@ -36838,9 +36838,10 @@ function updatePubspecVersion(pubspecPath, newVersion) {
 /**
  * Execute git command and return output
  * @param {string[]} args - Git command arguments
+ * @param {boolean} throwOnError - Whether to throw on error
  * @returns {string} - Command output
  */
-async function execGit(args) {
+async function execGit(args, throwOnError = false) {
   let output = '';
   let error = '';
   
@@ -36854,13 +36855,17 @@ async function execGit(args) {
       }
     },
     silent: true,
-    ignoreReturnCode: true
+    ignoreReturnCode: !throwOnError
   };
   
   const exitCode = await exec.exec('git', args, options);
   
   if (exitCode !== 0) {
-    core.warning(`Git command failed: git ${args.join(' ')}\nError: ${error}`);
+    const message = `Git command failed: git ${args.join(' ')}\nError: ${error}`;
+    if (throwOnError) {
+      throw new Error(message);
+    }
+    core.warning(message);
     return '';
   }
   
@@ -36875,21 +36880,39 @@ async function execGit(args) {
  */
 async function findPreviousVersion(branch, currentVersion) {
   try {
-    // Fetch the branch history
-    await execGit(['fetch', 'origin', branch, '--unshallow']);
+    // First, ensure we have the latest changes from the remote branch
+    core.info(`Fetching latest changes from origin/${branch}...`);
     
-    core.info(`Searching for previous version in ${branch} branch...`);
+    // Try to unshallow if repository is shallow
+    const isShallow = await execGit(['rev-parse', '--is-shallow-repository']);
+    if (isShallow === 'true') {
+      core.info('Repository is shallow, attempting to unshallow...');
+      await execGit(['fetch', '--unshallow'], false);
+    }
     
-    // Check last 20 commits for version changes
-    for (let i = 1; i <= 20; i++) {
-      const commitHash = await execGit(['rev-parse', `HEAD~${i}`]);
-      if (!commitHash) break;
-      
-      // Get pubspec.yaml content from this commit
-      const pubspecContent = await execGit(['show', `${commitHash}:pubspec.yaml`]);
-      if (!pubspecContent) continue;
+    // Fetch the target branch
+    await execGit(['fetch', 'origin', `${branch}:${branch}`], false);
+    
+    core.info(`Searching for previous version in ${branch} branch history...`);
+    
+    // Get the commit history for the target branch
+    const commitHashes = await execGit(['rev-list', `origin/${branch}`, '--max-count=50']);
+    if (!commitHashes) {
+      core.warning('No commit history found');
+      return null;
+    }
+    
+    const commits = commitHashes.split('\n').filter(hash => hash.trim());
+    core.info(`Checking ${commits.length} commits for version history...`);
+    
+    for (const commitHash of commits) {
+      if (!commitHash.trim()) continue;
       
       try {
+        // Get pubspec.yaml content from this commit
+        const pubspecContent = await execGit(['show', `${commitHash}:pubspec.yaml`]);
+        if (!pubspecContent) continue;
+        
         const doc = yaml.load(pubspecContent);
         const commitVersion = doc.version;
         
@@ -36898,37 +36921,12 @@ async function findPreviousVersion(branch, currentVersion) {
           return commitVersion;
         }
       } catch (error) {
-        // Skip invalid YAML
+        // Skip invalid YAML or missing files
         continue;
       }
     }
     
-    // Also check merge commits
-    core.info(`Checking recent merge commits in ${branch}...`);
-    const mergeCommits = await execGit(['log', `origin/${branch}`, '--merges', '--oneline', '-n', '10', '--format=%H']);
-    
-    if (mergeCommits) {
-      const commits = mergeCommits.split('\n').filter(line => line.trim());
-      
-      for (const commit of commits) {
-        const pubspecContent = await execGit(['show', `${commit}:pubspec.yaml`]);
-        if (!pubspecContent) continue;
-        
-        try {
-          const doc = yaml.load(pubspecContent);
-          const commitVersion = doc.version;
-          
-          if (commitVersion && commitVersion !== currentVersion) {
-            core.info(`Found previous version from merge: ${commitVersion} (from commit ${commit.substring(0, 8)})`);
-            return commitVersion;
-          }
-        } catch (error) {
-          // Skip invalid YAML
-          continue;
-        }
-      }
-    }
-    
+    core.info('No previous version found in commit history');
     return null;
   } catch (error) {
     core.warning(`Error finding previous version: ${error.message}`);
@@ -36938,10 +36936,32 @@ async function findPreviousVersion(branch, currentVersion) {
 
 /**
  * Configure git for committing
+ * @param {string} token - GitHub token for authentication
  */
-async function configureGit() {
-  await execGit(['config', '--local', 'user.email', 'action@github.com']);
-  await execGit(['config', '--local', 'user.name', 'GitHub Action Auto-Fix']);
+async function configureGit(token) {
+  try {
+    // Configure git user
+    await execGit(['config', '--local', 'user.email', 'action@github.com'], true);
+    await execGit(['config', '--local', 'user.name', 'GitHub Action Auto-Fix'], true);
+    
+    // Configure authentication if token is provided
+    if (token) {
+      const remoteUrl = await execGit(['config', '--get', 'remote.origin.url']);
+      if (remoteUrl) {
+        // Extract repository info from URL
+        const match = remoteUrl.match(/github\.com[\/:](.+?)(?:\.git)?$/);
+        if (match) {
+          const repo = match[1];
+          const authenticatedUrl = `https://x-access-token:${token}@github.com/${repo}.git`;
+          await execGit(['remote', 'set-url', 'origin', authenticatedUrl], true);
+          core.info('Git authentication configured');
+        }
+      }
+    }
+  } catch (error) {
+    core.warning(`Failed to configure git: ${error.message}`);
+    throw error;
+  }
 }
 
 /**
@@ -36950,25 +36970,47 @@ async function configureGit() {
  * @param {string} newVersion - New version
  * @param {string} previousVersion - Previous version
  * @param {string} customMessage - Custom commit message
+ * @param {string} token - GitHub token
  */
-async function commitAndPush(branch, newVersion, previousVersion, customMessage) {
-  await configureGit();
-  
-  const commitMessage = customMessage || `Auto-increment version to ${newVersion}
+async function commitAndPush(branch, newVersion, previousVersion, customMessage, token) {
+  try {
+    await configureGit(token);
+    
+    const commitMessage = customMessage || `Auto-increment version to ${newVersion}
 
 Previous version: ${previousVersion}
 New version: ${newVersion}
 Auto-generated by GitHub Actions`;
 
-  await execGit(['add', 'pubspec.yaml']);
-  await execGit(['commit', '-m', commitMessage]);
-  
-  // Create and push tag
-  await execGit(['tag', '-a', `v${newVersion}`, '-m', `Staging release v${newVersion}`]);
-  
-  core.info(`Pushing version update and tag to ${branch}...`);
-  await execGit(['push', 'origin', branch]);
-  await execGit(['push', 'origin', `v${newVersion}`]);
+    // Check if there are changes to commit
+    const status = await execGit(['status', '--porcelain']);
+    if (!status) {
+      core.info('No changes to commit');
+      return;
+    }
+
+    core.info('Staging pubspec.yaml changes...');
+    await execGit(['add', 'pubspec.yaml'], true);
+    
+    core.info('Committing version update...');
+    await execGit(['commit', '-m', commitMessage], true);
+    
+    // Create and push tag
+    const tagName = `v${newVersion}`;
+    core.info(`Creating tag ${tagName}...`);
+    await execGit(['tag', '-a', tagName, '-m', `Release ${tagName}`], true);
+    
+    core.info(`Pushing changes to ${branch}...`);
+    await execGit(['push', 'origin', `HEAD:${branch}`], true);
+    
+    core.info(`Pushing tag ${tagName}...`);
+    await execGit(['push', 'origin', tagName], true);
+    
+    core.info('Successfully pushed version update and tag');
+  } catch (error) {
+    core.error(`Failed to commit and push: ${error.message}`);
+    throw error;
+  }
 }
 
 /**
@@ -36982,22 +37024,29 @@ async function run() {
     const customMessage = core.getInput('commit-message');
     const pubspecPath = 'pubspec.yaml'; // Always in project root
     
-    core.info(`Checking Flutter version in ${pubspecPath} against ${branch} branch...`);
+    core.info(`🚀 Flutter Version Checker & Auto-Increment Action`);
+    core.info(`📋 Checking version in ${pubspecPath} against ${branch} branch...`);
+    
+    // Validate required inputs
+    if (!token) {
+      core.setFailed('GitHub token is required. Please provide the token input.');
+      return;
+    }
     
     // Check if pubspec.yaml exists
     if (!fs.existsSync(pubspecPath)) {
-      core.setFailed(`pubspec.yaml not found at ${pubspecPath}`);
+      core.setFailed(`❌ pubspec.yaml not found at ${pubspecPath}`);
       return;
     }
     
     // Get current version
     const currentVersion = getCurrentVersion(pubspecPath);
     if (!currentVersion) {
-      core.setFailed('Could not read version from pubspec.yaml');
+      core.setFailed('❌ Could not read version from pubspec.yaml');
       return;
     }
     
-    core.info(`Current version in pubspec.yaml: ${currentVersion}`);
+    core.info(`📦 Current version in pubspec.yaml: ${currentVersion}`);
     
     // Find previous version in branch history
     const previousVersion = await findPreviousVersion(branch, currentVersion);
@@ -37007,7 +37056,7 @@ async function run() {
     core.setOutput('current-version', currentVersion);
     
     if (!previousVersion) {
-      core.info('Version check passed! No previous version found (first build).');
+      core.info('✅ Version check passed! No previous version found (first build).');
       core.setOutput('version-updated', 'false');
       return;
     }
@@ -37015,39 +37064,39 @@ async function run() {
     // Compare versions
     const comparison = compareVersions(currentVersion, previousVersion);
     
-    core.info(`Comparing version numbers...`);
-    core.info(`   Current version: ${currentVersion}`);
-    core.info(`   Previous version: ${previousVersion}`);
+    core.info(`🔍 Comparing version numbers...`);
+    core.info(`   📋 Current version: ${currentVersion}`);
+    core.info(`   📋 Previous version: ${previousVersion}`);
     
     if (comparison > 0) {
-      core.info('Version check passed! Current version is greater than previous.');
+      core.info('✅ Version check passed! Current version is greater than previous.');
       core.setOutput('version-updated', 'false');
       return;
     }
     
     if (comparison <= 0) {
-      core.warning(`Version ${currentVersion} is not greater than previous version ${previousVersion}!`);
-      core.info('Auto-fixing version number...');
+      core.warning(`⚠️  Version ${currentVersion} is not greater than previous version ${previousVersion}!`);
+      core.info('🔧 Auto-fixing version number...');
       
       // Generate new version
       const newVersion = generateNextVersion(previousVersion);
-      core.info(`Auto-incrementing version: ${currentVersion} → ${newVersion}`);
+      core.info(`📈 Auto-incrementing version: ${currentVersion} → ${newVersion}`);
       
       // Update pubspec.yaml
       if (!updatePubspecVersion(pubspecPath, newVersion)) {
-        core.setFailed('Failed to update pubspec.yaml');
+        core.setFailed('❌ Failed to update pubspec.yaml');
         return;
       }
       
       // Verify the change
       const updatedVersion = getCurrentVersion(pubspecPath);
-      core.info(`Updated pubspec.yaml with version: ${updatedVersion}`);
+      core.info(`✅ Updated pubspec.yaml with version: ${updatedVersion}`);
       
       // Commit and push changes
-      await commitAndPush(branch, newVersion, previousVersion, customMessage);
+      await commitAndPush(branch, newVersion, previousVersion, customMessage, token);
       
-      core.info('Version has been auto-incremented and committed.');
-      core.info(`The workflow will now continue with the new version: ${newVersion}`);
+      core.info('🎉 Version has been auto-incremented and committed.');
+      core.info(`🚀 The workflow will now continue with the new version: ${newVersion}`);
       
       // Set outputs
       core.setOutput('version-updated', 'true');
@@ -37056,7 +37105,8 @@ async function run() {
     }
     
   } catch (error) {
-    core.setFailed(`Action failed: ${error.message}`);
+    core.setFailed(`❌ Action failed: ${error.message}`);
+    core.debug(`Stack trace: ${error.stack}`);
   }
 }
 

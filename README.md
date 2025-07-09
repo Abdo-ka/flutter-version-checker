@@ -4,12 +4,24 @@ A GitHub Action that automatically checks Flutter version numbers in `pubspec.ya
 
 ## Features
 
-- **Version History Check**: Scans branch commit history to find previous versions
-- **Auto-Increment**: Automatically increments patch and build numbers when needed
-- **Smart Comparison**: Handles semantic versioning with build numbers (e.g., `50.8.47+177`)
-- **Auto-Commit**: Commits and pushes version changes automatically
-- **Detailed Outputs**: Provides previous, current, and new version information
-- **Flexible Configuration**: Customizable branch, pubspec path, and commit messages
+- **🔍 Version History Check**: Scans branch commit history to find previous versions
+- **📈 Auto-Increment**: Automatically increments patch and build numbers when needed
+- **🧠 Smart Comparison**: Handles semantic versioning with build numbers (e.g., `50.8.47+177`)
+- **🚀 Auto-Commit**: Commits and pushes version changes automatically with tags
+- **📊 Detailed Outputs**: Provides previous, current, and new version information
+- **⚙️ Flexible Configuration**: Customizable branch, pubspec path, and commit messages
+- **🔒 Secure**: Uses GitHub token authentication for safe operations
+- **🏷️ Git Tags**: Automatically creates version tags for releases
+
+## How It Works
+
+1. **Fetches History**: The action fetches the specified branch history
+2. **Finds Previous Version**: Scans recent commits to find the last version in `pubspec.yaml`
+3. **Compares Versions**: Uses semantic versioning to compare current vs previous
+4. **Auto-Increments**: If current ≤ previous, automatically increments the version
+5. **Commits Changes**: Pushes the updated `pubspec.yaml` with a descriptive commit
+6. **Creates Tags**: Adds version tags for easy release tracking
+7. **Continues Workflow**: Your CI/CD continues with the corrected version
 
 ## Usage
 
@@ -43,6 +55,7 @@ jobs:
     - name: Continue with your CI/CD
       run: |
         echo "Version: ${{ steps.version-check.outputs.current-version }}"
+        echo "Was updated: ${{ steps.version-check.outputs.version-updated }}"
         # Your Flutter build, test, and deployment steps here
 ```
 
