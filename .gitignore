@@ -52,7 +52,7 @@ ehthumbs.db
 Thumbs.db
 
 # Build output
-dist/
+# dist/ (commented out because GitHub Actions need the dist folder)
 *.tsbuildinfo
 
 # Test output
