@@ -1,6 +1,38 @@
 # Flutter Version Checker - Professional Updates Summary
 
-## Latest Changes (v1.1.0)
+## Latest Changes (v1.2.0) 🚀
+
+### 🔧 Major Enhancements & Bug Fixes
+- **Enhanced Git Operations**: Robust authentication using GitHub token with improved error handling
+- **Shallow Repository Support**: Automatic detection and handling of shallow git repositories
+- **Improved Branch Handling**: Better fetching of target branch history and commit analysis
+- **Enhanced Error Handling**: Comprehensive error messages with detailed debugging information
+- **Professional Logging**: Added emoji-enhanced logging for better user experience
+
+### 🛡️ Security & Reliability
+- **Token Validation**: Required GitHub token validation for secure operations
+- **Git Authentication**: Proper authentication setup for push operations
+- **Error Recovery**: Better handling of git operation failures
+- **Status Verification**: Checks for actual changes before committing
+
+### 📚 Documentation Improvements
+- **Complete Examples**: Added comprehensive workflow examples (simple & advanced)
+- **Troubleshooting Guide**: Created detailed troubleshooting documentation
+- **Implementation Summary**: Added summary of all improvements and features
+- **Real-world Scenarios**: Provided practical usage scenarios and configurations
+
+### 🎯 New Features
+- **Version Tag Creation**: Automatically creates and pushes version tags (v1.2.3+45 format)
+- **Enhanced Output**: Detailed action outputs for integration with other workflow steps
+- **Smart Version Detection**: Improved algorithm for finding previous versions in git history
+- **Flexible Configuration**: Support for custom commit messages and branch targeting
+
+### 🧪 Testing & Quality
+- **All Tests Passing**: Maintained 100% test pass rate (10/10 tests)
+- **Built Distribution**: Updated compiled action in dist/ folder
+- **Production Ready**: Thoroughly tested and ready for production use
+
+## Previous Changes (v1.1.0)
 
 ### 1. Simplified Configuration
 - **Removed `pubspec-path` parameter**: Action now always looks for `pubspec.yaml` in project root (standard Flutter structure)
