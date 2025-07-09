@@ -1,4 +1,25 @@
-# Flutter Version Checker - Professional Updates Summary
+# Flutter Version Checker - Release History
+
+## v1.2.0 (2025-07-09)
+
+## What's Changed
+
+### Commits since v1:
+- 🚀 Release v1.2.0 (73f351f)
+- feat: Enhance Flutter Version Checker Action with robust git operations and error handling (ba67bc9)
+
+## Features
+- feat: Enhance Flutter Version Checker Action with robust git operations and error handling
+
+## Bug Fixes
+
+## Improvements
+- feat: Enhance Flutter Version Checker Action with robust git operations and error handling
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1...v1.2.0
+
+
 
 ## Latest Changes (v1.2.0) 🚀
 
