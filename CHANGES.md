@@ -2,6 +2,31 @@
 
 ## v1.2.2 (2025-07-09)
 
+## What's Changed
+
+### Commits since v1.2.1:
+- 🐛 Fix version comparison logic - Release v1.2.2 (1390f33)
+-  Release v1.2.2 (66852e4)
+- Merge branch 'main' of github-personal:Abdo-ka/flutter-version-checker (0d97f8c)
+- chore: Bump version to 1.2.2 and enhance version checking logic (db75cac)
+- Auto-update CHANGES.md for v1.2.1 [skip ci] (6d3f90c)
+
+## Features
+
+## Bug Fixes
+- 🐛 Fix version comparison logic - Release v1.2.2
+
+## Improvements
+- chore: Bump version to 1.2.2 and enhance version checking logic
+- Auto-update CHANGES.md for v1.2.1 [skip ci]
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.2.1...v1.2.2
+
+
+
+## v1.2.2 (2025-07-09)
+
 ### 🐛 Bug Fixes
 - **Fixed Version Comparison Logic**: Corrected the `compareVersions` function to properly detect identical versions
 - **Enhanced Version Detection**: Improved logic to properly handle cases where current version equals previous version
