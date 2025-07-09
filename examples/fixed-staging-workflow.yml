@@ -1,0 +1,145 @@
+name: 🚀 Staging Google Play Deployment
+
+on:
+  push:
+    branches:
+      - release/old-staging
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+      actions: read
+
+    env:
+      JAVA_VERSION: 17
+      FLUTTER_VERSION: 3.24.0
+      AAB_PATH: build/app/outputs/bundle/productionRelease/app-production-release.aab
+      KEYSTORE_PATH: android/upload-keystore.jks
+      KEY_PROPS_PATH: android/key.properties
+      SERVICE_ACCOUNT_PATH: store_credentials.json
+      ENV_FILE: env/staging.env
+
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: "release/old-staging"
+          fetch-depth: 0  # Important: Need full history for version checking
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Replace the custom version checking step with the Flutter Version Checker
+      - name: 🔍 Flutter Version Checker & Auto-Increment
+        id: version-check
+        uses: Abdo-ka/flutter-version-checker@v1.2.0
+        with:
+          branch: "release/old-staging"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🔧 Auto-increment version for staging deployment [skip ci]"
+
+      - name: 📋 Show Version Info
+        run: |
+          echo "📦 Previous version: ${{ steps.version-check.outputs.previous-version }}"
+          echo "📦 Current version: ${{ steps.version-check.outputs.current-version }}"
+          echo "🔄 Version was updated: ${{ steps.version-check.outputs.version-updated }}"
+          if [ "${{ steps.version-check.outputs.version-updated }}" == "true" ]; then
+            echo "✨ New version: ${{ steps.version-check.outputs.new-version }}"
+          fi
+
+      # If version was updated, we need to checkout the latest commit
+      - name: 🔄 Refresh Checkout After Version Update
+        if: steps.version-check.outputs.version-updated == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: "release/old-staging"
+          fetch-depth: 1
+
+      - name: ☕ Set Up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: 🐦 Set Up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: 📂 Decode ENV File
+        run: |
+          mkdir -p env
+          echo "${{ secrets.STAGING_ENV_FILE }}" | base64 --decode > ${{ env.ENV_FILE }}
+
+      - name: Decode Android keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE }}" | base64 --decode > ${{ env.KEYSTORE_PATH }}
+
+      - name: Decode Android key properties
+        run: echo "${{ secrets.ANDROID_KEY_PROPERTIES }}" | base64 --decode > ${{ env.KEY_PROPS_PATH }}
+
+      - name: 🔐 Decode Google Play Service Account
+        run: echo "${{ secrets.GOOGLE_PLAY_CREDENTIAL_FILE }}" | base64 --decode > ${{ env.SERVICE_ACCOUNT_PATH }}
+
+      - name: 📦 Install Dependencies
+        run: flutter pub get --no-precompile
+
+      - name: 🔍 Analyze Dart Code
+        continue-on-error: true
+        run: |
+          echo "🔍 Running flutter analyze..."
+          flutter analyze
+
+      - name: 🛠️ Build AAB (Staging)
+        run: |
+          echo "🏗️ Building app bundle for Staging..."
+          echo "📦 Building with version: ${{ steps.version-check.outputs.current-version }}"
+          flutter build appbundle \
+            --release \
+            --flavor production \
+            -t lib/main_staging.dart \
+            --dart-define-from-file=${{ env.ENV_FILE }}
+
+      - name: 📤 Upload AAB Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aab-staging-${{ steps.version-check.outputs.current-version }}
+          path: ${{ env.AAB_PATH }}
+          retention-days: 7
+
+      - name: 🚀 Deploy to Google Play (Internal Testing)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ env.SERVICE_ACCOUNT_PATH }}
+          packageName: ${{ secrets.APP_PACKAGE_NAME }}
+          releaseFiles: ${{ env.AAB_PATH }}
+          track: internal
+          status: completed
+
+      - name: 🔖 Extract App Version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*//')
+          echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "📦 Extracted App Version: $VERSION"
+
+      # Note: No need to create git tag here as the Flutter Version Checker already creates tags
+      # - name: 🏷️ Create Git Tag
+      #   if: success()
+      #   run: |
+      #     VERSION=$(grep '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*//')
+      #     git config --local user.email "action@github.com"
+      #     git config --local user.name "GitHub Action"
+      #     git tag -a "$VERSION" -m "Staging release v$VERSION"
+      #     git push origin "$VERSION"
+
+      - name: 📢 Notify ClickUp
+        uses: architweb/ClickUpNotification@v1.4.0
+        with:
+          clickup_api_token: ${{ secrets.CLICKUP_API_TOKEN }}
+          clickup_workspace_id: ${{ secrets.CLICKUP_WORKSPACE_ID }}
+          clickup_channel_id: ${{ secrets.CLICKUP_CHANNEL_ID }}
+          clickup_project_name: "${{ secrets.CLICKUP_PROJECT_NAME_GOOGLE_PLAY }} - _v${{ env.APP_VERSION }}_"

@@ -36772,7 +36772,7 @@ function compareVersions(current, previous) {
   
   // Same base version, compare build numbers
   if (currentParsed.build > previousParsed.build) return 1;
-  if (currentParsed.build < previousParsed.build) return -1;
+  if (currentParsed.build <= previousParsed.build) return -1;
   return 0;
 }
 
@@ -36896,7 +36896,7 @@ async function findPreviousVersion(branch, currentVersion) {
     core.info(`Searching for previous version in ${branch} branch history...`);
     
     // Get the commit history for the target branch
-    const commitHashes = await execGit(['rev-list', `origin/${branch}`, '--max-count=50']);
+    const commitHashes = await execGit(['rev-list', `origin/${branch}`, '--max-count=100']);
     if (!commitHashes) {
       core.warning('No commit history found');
       return null;
@@ -36904,6 +36904,9 @@ async function findPreviousVersion(branch, currentVersion) {
     
     const commits = commitHashes.split('\n').filter(hash => hash.trim());
     core.info(`Checking ${commits.length} commits for version history...`);
+    
+    let sameVersionCount = 0;
+    let foundVersions = [];
     
     for (const commitHash of commits) {
       if (!commitHash.trim()) continue;
@@ -36916,13 +36919,49 @@ async function findPreviousVersion(branch, currentVersion) {
         const doc = yaml.load(pubspecContent);
         const commitVersion = doc.version;
         
-        if (commitVersion && commitVersion !== currentVersion) {
-          core.info(`Found previous version: ${commitVersion} (from commit ${commitHash.substring(0, 8)})`);
-          return commitVersion;
+        if (commitVersion) {
+          foundVersions.push({
+            version: commitVersion,
+            commit: commitHash.substring(0, 8)
+          });
+          
+          if (commitVersion === currentVersion) {
+            sameVersionCount++;
+            core.info(`Found same version: ${commitVersion} (commit ${commitHash.substring(0, 8)}) - Count: ${sameVersionCount}`);
+          } else {
+            // Found a different version
+            core.info(`Found different version: ${commitVersion} (commit ${commitHash.substring(0, 8)})`);
+            
+            // If we found multiple commits with the same version, this indicates version reuse
+            if (sameVersionCount > 1) {
+              core.warning(`⚠️ Version ${currentVersion} was found in ${sameVersionCount} commits! This indicates version reuse.`);
+              core.info(`📋 Returning current version as previous to force increment: ${currentVersion}`);
+              return currentVersion; // This will trigger auto-increment
+            }
+            
+            core.info(`Found previous version: ${commitVersion} (from commit ${commitHash.substring(0, 8)})`);
+            return commitVersion;
+          }
         }
       } catch (error) {
         // Skip invalid YAML or missing files
         continue;
+      }
+    }
+    
+    // If we only found the same version multiple times and no different version
+    if (sameVersionCount > 1) {
+      core.warning(`⚠️ Found ${sameVersionCount} commits with the same version ${currentVersion}!`);
+      core.info(`📋 Version reuse detected. Returning current version to force increment.`);
+      return currentVersion; // This will trigger auto-increment
+    }
+    
+    // If we only found one instance of the current version, look for the last different version
+    if (foundVersions.length > 0) {
+      const lastDifferentVersion = foundVersions.find(v => v.version !== currentVersion);
+      if (lastDifferentVersion) {
+        core.info(`Found last different version: ${lastDifferentVersion.version} (commit ${lastDifferentVersion.commit})`);
+        return lastDifferentVersion.version;
       }
     }
     
@@ -37068,14 +37107,46 @@ async function run() {
     core.info(`   📋 Current version: ${currentVersion}`);
     core.info(`   📋 Previous version: ${previousVersion}`);
     
+    // Special case: if current version equals previous version, it indicates version reuse
+    if (currentVersion === previousVersion) {
+      core.warning(`⚠️  Version reuse detected! Version ${currentVersion} was already used in previous commits.`);
+      core.info('🔧 Auto-fixing version number due to version reuse...');
+      
+      // Generate new version based on current version
+      const newVersion = generateNextVersion(currentVersion);
+      core.info(`📈 Auto-incrementing version: ${currentVersion} → ${newVersion}`);
+      
+      // Update pubspec.yaml
+      if (!updatePubspecVersion(pubspecPath, newVersion)) {
+        core.setFailed('❌ Failed to update pubspec.yaml');
+        return;
+      }
+      
+      // Verify the change
+      const updatedVersion = getCurrentVersion(pubspecPath);
+      core.info(`✅ Updated pubspec.yaml with version: ${updatedVersion}`);
+      
+      // Commit and push changes
+      await commitAndPush(branch, newVersion, currentVersion, customMessage, token);
+      
+      core.info('🎉 Version has been auto-incremented due to reuse and committed.');
+      core.info(`🚀 The workflow will now continue with the new version: ${newVersion}`);
+      
+      // Set outputs
+      core.setOutput('version-updated', 'true');
+      core.setOutput('new-version', newVersion);
+      core.setOutput('current-version', newVersion);
+      return;
+    }
+    
     if (comparison > 0) {
       core.info('✅ Version check passed! Current version is greater than previous.');
       core.setOutput('version-updated', 'false');
       return;
     }
     
-    if (comparison <= 0) {
-      core.warning(`⚠️  Version ${currentVersion} is not greater than previous version ${previousVersion}!`);
+    if (comparison < 0) {
+      core.warning(`⚠️  Version ${currentVersion} is lower than previous version ${previousVersion}!`);
       core.info('🔧 Auto-fixing version number...');
       
       // Generate new version
