@@ -1,0 +1,34 @@
+name: Test Flutter Version Checker Action
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Test Flutter Version Checker
+      id: version-check
+      uses: ./  # Use local action for testing
+      with:
+        branch: main
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: "Test version update [skip ci]"
+    
+    - name: Display Results
+      run: |
+        echo "Previous Version: ${{ steps.version-check.outputs.previous-version }}"
+        echo "Current Version: ${{ steps.version-check.outputs.current-version }}"
+        echo "Version Updated: ${{ steps.version-check.outputs.version-updated }}"
+        echo "New Version: ${{ steps.version-check.outputs.new-version }}"
