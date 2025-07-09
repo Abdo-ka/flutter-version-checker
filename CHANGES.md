@@ -1,4 +1,23 @@
-# Flutter Version Checker - Professional Updates Summary
+# Flutter Version Checker - Release History
+
+## v1.0.2 (2025-07-09)
+
+## What's Changed
+
+### Commits since v1.0.1:
+- Fix auto-release workflow git push issue (a4f4262)
+
+## Features
+
+## Bug Fixes
+- Fix auto-release workflow git push issue
+
+## Improvements
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.0.1...v1.0.2
+
+
 
 ## Latest Changes (v1.1.0)
 
