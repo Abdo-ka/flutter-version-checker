@@ -1,5 +1,25 @@
 # Flutter Version Checker - Release History
 
+## v1.2.3 (2025-07-10)
+
+## What's Changed
+
+### Commits since v1.2.2:
+- Remove emojis from logs and messages (c6b4921)
+- Auto-update CHANGES.md for v1.2.2 [skip ci] (b6ae8b6)
+
+## Features
+
+## Bug Fixes
+
+## Improvements
+- Auto-update CHANGES.md for v1.2.2 [skip ci]
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.2.2...v1.2.3
+
+
+
 ## v1.2.2 (2025-07-09)
 
 ## What's Changed
