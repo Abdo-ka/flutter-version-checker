@@ -1,0 +1,49 @@
+name: Flutter Auto-Version (No Token Required)
+on:
+  push:
+    branches: [main, release/staging]
+
+# Only requirement: give the workflow write permissions
+permissions:
+  contents: write
+
+jobs:
+  auto-version-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Standard checkout - the action will automatically use GITHUB_TOKEN
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history
+      
+      # No token needed! The action automatically uses GITHUB_TOKEN
+      - name: Auto-increment Flutter Version
+        uses: ./  # Replace with your action path
+        with:
+          branch: ${{ github.ref_name }}
+          # No token parameter needed - uses GITHUB_TOKEN automatically!
+          commit-message: "🚀 Auto-increment version [skip ci]"
+        
+      # Continue with your build process
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.24.0
+          
+      - name: Get dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release
+
+      # The action outputs can be used in subsequent steps
+      - name: Show version info
+        run: |
+          echo "Previous version: ${{ steps.auto-increment.outputs.previous-version }}"
+          echo "Current version: ${{ steps.auto-increment.outputs.current-version }}"
+          echo "Was updated: ${{ steps.auto-increment.outputs.version-updated }}"
+          if [[ "${{ steps.auto-increment.outputs.version-updated }}" == "true" ]]; then
+            echo "New version: ${{ steps.auto-increment.outputs.new-version }}"
+          fi

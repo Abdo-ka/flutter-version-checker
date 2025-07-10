@@ -8,13 +8,21 @@ inputs:
     required: true
     default: 'main'
   token:
-    description: 'GitHub token for pushing changes'
-    required: true
-    default: ${{ github.token }}
+    description: 'GitHub token for pushing changes (optional - automatically uses GITHUB_TOKEN from environment if not provided)'
+    required: false
+    default: ''
   commit-message:
     description: 'Custom commit message for version updates'
     required: false
     default: 'Auto-increment version'
+  git-user-email:
+    description: 'Git user email for commits (defaults to action@github.com for compatibility)'
+    required: false
+    default: 'action@github.com'
+  git-user-name:
+    description: 'Git user name for commits'
+    required: false
+    default: 'GitHub Action Auto-Fix'
 
 outputs:
   previous-version:

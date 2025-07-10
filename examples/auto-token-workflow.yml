@@ -1,0 +1,41 @@
+name: Flutter Auto Version (No Token Required)
+on:
+  push:
+    branches: [main, release/staging]
+
+# REQUIRED: These permissions allow the action to auto-commit
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  auto-version:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout with full history for version checking
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history
+      
+      # Run Flutter Version Checker - NO TOKEN NEEDED!
+      # The action will automatically use GITHUB_TOKEN from the environment
+      - name: Auto-increment Flutter Version
+        uses: ./  # Replace with your action path
+        with:
+          branch: ${{ github.ref_name }}
+          commit-message: "🔄 Auto-increment version [skip ci]"
+        # Notice: No token parameter needed!
+        
+      # Continue with your Flutter build process
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.24.0
+          
+      - name: Get dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release

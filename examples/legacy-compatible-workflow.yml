@@ -1,0 +1,46 @@
+name: Flutter Version Check - Legacy Compatible
+on:
+  push:
+    branches: [main, release/staging]
+
+# CRITICAL: These permissions are required to fix the exit code 128 error
+permissions:
+  contents: write      # Required for pushing commits and tags
+  actions: read        # Required for workflow execution
+  metadata: read       # Required for repository metadata
+
+jobs:
+  version-check-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout with proper configuration
+      - name: Checkout code with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history for version checking
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true  # Keep credentials for subsequent git operations
+      
+      # Run the Flutter Version Checker with your old working configuration
+      - name: Check and Auto-increment Flutter Version
+        uses: ./  # Replace with your action path
+        with:
+          branch: ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "🔄 Auto-increment version [skip ci]"
+          # Use your previous working Git configuration
+          git-user-email: "action@github.com"
+          git-user-name: "GitHub Action Auto-Fix"
+        
+      # Continue with your Flutter build process
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.24.0
+          
+      - name: Get dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release
