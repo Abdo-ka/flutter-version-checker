@@ -1,0 +1,138 @@
+name: Publish GitHub Action
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      version:
+        description: 'Version to publish (without v prefix)'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  publish-action:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ github.token }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Build distribution
+      run: |
+        echo "Building distribution files..."
+        npm run build
+        
+        # Verify dist files exist
+        if [ ! -f "dist/index.js" ]; then
+          echo "❌ Build failed: dist/index.js not found"
+          exit 1
+        fi
+        
+        echo "✅ Build completed successfully"
+        ls -la dist/
+    
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action Publisher"
+    
+    - name: Commit distribution files
+      run: |
+        git add dist/
+        
+        if git diff --staged --quiet; then
+          echo "No distribution changes to commit"
+        else
+          git commit -m "Update distribution files for v${{ steps.version.outputs.version }}"
+          git push origin main
+          echo "✅ Committed and pushed distribution files"
+        fi
+    
+    - name: Create/Update Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        tag_name: v${{ steps.version.outputs.version }}
+        release_name: Flutter Version Checker v${{ steps.version.outputs.version }}
+        body: |
+          ## 🚀 Flutter Version Checker & Auto-Increment Action v${{ steps.version.outputs.version }}
+          
+          ### Features
+          - ✅ Automatic Flutter version checking and incrementing
+          - ✅ Smart semantic versioning with build number support
+          - ✅ Auto-commit and push with descriptive messages
+          - ✅ Version tag creation for releases
+          - ✅ No external token configuration required
+          
+          ### Usage
+          ```yaml
+          - name: Check and Auto-Increment Flutter Version
+            uses: ${{ github.repository }}@v${{ steps.version.outputs.version }}
+            with:
+              branch: main
+              token: ${{ github.token }}
+              commit-message: "Auto-increment version [skip ci]"
+          ```
+          
+          ### What's Included
+          - Built and tested distribution files
+          - Complete documentation
+          - Local development scripts
+          - GitHub Actions workflows
+          
+          ### Documentation
+          - [Usage Guide](https://github.com/${{ github.repository }}/blob/main/USAGE.md)
+          - [Auto-Increment Guide](https://github.com/${{ github.repository }}/blob/main/AUTO_INCREMENT_GUIDE.md)
+          - [Quick Setup](https://github.com/${{ github.repository }}/blob/main/QUICK_SETUP.md)
+          
+          ---
+          🤖 Auto-generated release by GitHub Actions
+        draft: false
+        prerelease: false
+    
+    - name: Update major version tag
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        MAJOR_VERSION=$(echo "$VERSION" | cut -d. -f1)
+        
+        # Create or update the major version tag (e.g., v1, v2)
+        git tag -f "v$MAJOR_VERSION" HEAD
+        git push origin "v$MAJOR_VERSION" --force
+        
+        echo "✅ Updated major version tag: v$MAJOR_VERSION"
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}

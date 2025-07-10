@@ -200,3 +200,163 @@ If you encounter issues or have questions:
 1. Check the [GitHub Issues](https://github.com/Abdo-ka/flutter-version-checker/issues)
 2. Create a new issue with detailed information
 3. Include your workflow file and error messages
+
+## Local Auto-Increment (No Token Required!)
+
+### Quick Start
+
+For local development or CI environments where you don't want to use GitHub tokens:
+
+```bash
+# Using npm script (easiest)
+npm run version:increment
+
+# Using the script directly
+node scripts/auto-increment-version.js
+
+# Using the interactive helper
+./scripts/increment.sh
+```
+
+### Features
+
+- ✅ **No GitHub token required** - uses your existing git authentication
+- ✅ **Simple one-command execution**
+- ✅ **Automatic version increment** (patch + build number)
+- ✅ **Git commit and push** with descriptive message
+- ✅ **Version tag creation** (e.g., `v1.0.2+3`)
+- ✅ **Works locally and in CI/CD**
+
+### Setup
+
+1. **Install dependencies** (if not already done):
+   ```bash
+   npm install js-yaml
+   ```
+
+2. **Configure git** (one-time setup):
+   ```bash
+   git config user.name "Your Name"
+   git config user.email "your.email@example.com"
+   ```
+
+3. **Run the script**:
+   ```bash
+   npm run version:increment
+   ```
+
+### Example Output
+
+```
+🚀 Flutter Version Auto-Increment Script
+=========================================
+📦 Current version: 1.0.1+2
+📈 New version: 1.0.2+3
+✅ Updated pubspec.yaml with version: 1.0.2+3
+📝 Staging changes...
+💾 Committing changes...
+🏷️  Creating tag v1.0.2+3...
+🚀 Pushing changes...
+🚀 Pushing tag...
+🎉 Version successfully incremented and pushed!
+```
+
+### GitHub Actions (Auto-Increment Only)
+
+Use the simplified workflow for automatic version increment:
+
+```yaml
+name: Auto-Increment Version
+
+on:
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  contents: write
+
+jobs:
+  auto-increment-version:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ github.token }}
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - run: npm ci
+    - run: npm run version:increment
+```
+
+See [AUTO_INCREMENT_GUIDE.md](AUTO_INCREMENT_GUIDE.md) for detailed documentation.
+
+## GitHub Action Usage (Published)
+
+### Quick Setup for Your Flutter Project
+
+Add this workflow to your Flutter repository at `.github/workflows/version-check.yml`:
+
+```yaml
+name: Flutter Version Auto-Increment
+
+on:
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  contents: write  # Required for pushing version updates
+
+jobs:
+  version-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ github.token }}
+    
+    - name: Auto-Increment Flutter Version
+      uses: Abdo-ka/flutter-version-checker@v1
+      with:
+        branch: ${{ github.ref_name }}
+        token: ${{ github.token }}
+        commit-message: "🚀 Auto-increment version [skip ci]"
+    
+    # Continue with your Flutter build steps...
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: 'stable'
+    
+    - name: Build App
+      run: |
+        flutter pub get
+        flutter build apk
+```
+
+### Advanced Usage
+
+```yaml
+- name: Check and Auto-Increment Flutter Version
+  id: version-check
+  uses: Abdo-ka/flutter-version-checker@v1
+  with:
+    branch: 'main'
+    token: ${{ github.token }}
+    commit-message: 'Auto-increment version to %NEW_VERSION% [skip ci]'
+
+- name: Use Version Info
+  run: |
+    echo "Previous: ${{ steps.version-check.outputs.previous-version }}"
+    echo "Current: ${{ steps.version-check.outputs.current-version }}"
+    echo "Updated: ${{ steps.version-check.outputs.version-updated }}"
+```
+
+See [examples/github-workflows.md](examples/github-workflows.md) for more usage examples.

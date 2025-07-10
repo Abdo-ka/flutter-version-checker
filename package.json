@@ -9,7 +9,11 @@
     "test": "jest",
     "start": "node src/index.js",
     "changelog": "git log --oneline --pretty=format:'- %s (%h)' HEAD~10..HEAD",
-    "release": "npm run build && npm test"
+    "release": "npm run build && npm test",
+    "version:increment": "node scripts/auto-increment-version.js",
+    "version:auto": "npm run version:increment",
+    "publish:prepare": "npm run build && npm test && git add dist/",
+    "publish:action": "npm run publish:prepare && npm run version:increment"
   },
   "keywords": [
     "github-action",
