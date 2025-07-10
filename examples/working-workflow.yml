@@ -1,0 +1,51 @@
+name: Flutter Version Check and Build
+on:
+  push:
+    branches: [release/staging]
+
+# IMPORTANT: These permissions are required for the action to work
+permissions:
+  contents: write  # Required for committing version changes
+  actions: read    # Required for workflow execution
+
+jobs:
+  version-check-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout with full history - important for version checking
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Get full git history
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Run the Flutter Version Checker
+      - name: Check and Auto-increment Flutter Version
+        uses: ./  # Replace with your action path
+        with:
+          branch: release/staging
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto-increment version"
+        env:
+          JAVA_VERSION: 17
+          FLUTTER_VERSION: 3.24.0
+          AAB_PATH: build/app/outputs/bundle/stagingRelease/app-staging-release.aab
+          KEYSTORE_PATH: android/upload-keystore.jks
+          KEY_PROPS_PATH: android/key.properties
+          SERVICE_ACCOUNT_PATH: store_credentials.json
+          ENV_FILE: env/staging.env
+      
+      # Continue with your Flutter build process
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          
+      - name: Get dependencies
+        run: flutter pub get
+        
+      - name: Build APK
+        run: flutter build apk --release
+        
+      # Additional build steps as needed...
