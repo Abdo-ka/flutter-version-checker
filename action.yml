@@ -1,5 +1,5 @@
 name: 'Flutter Version Checker & Auto-Increment'
-description: 'Checks Flutter pubspec.yaml version against branch history and auto-increments if needed'
+description: 'Checks Flutter pubspec.yaml version against branch history and auto-increments if needed (No token required!)'
 author: 'Abd Alrahman Kanawati'
 
 inputs:
@@ -7,22 +7,18 @@ inputs:
     description: 'The branch to check version history against'
     required: true
     default: 'main'
-  token:
-    description: 'GitHub token for pushing changes (optional - automatically uses GITHUB_TOKEN from environment if not provided)'
-    required: false
-    default: ''
   commit-message:
     description: 'Custom commit message for version updates'
     required: false
-    default: 'Auto-increment version'
+    default: 'Auto-increment version [skip ci]'
   git-user-email:
-    description: 'Git user email for commits (defaults to action@github.com for compatibility)'
+    description: 'Git user email for commits (defaults to GitHub Actions bot)'
     required: false
-    default: 'action@github.com'
+    default: '41898282+github-actions[bot]@users.noreply.github.com'
   git-user-name:
     description: 'Git user name for commits'
     required: false
-    default: 'GitHub Action Auto-Fix'
+    default: 'github-actions[bot]'
 
 outputs:
   previous-version:

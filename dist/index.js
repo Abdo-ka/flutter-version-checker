@@ -36994,27 +36994,25 @@ async function findPreviousVersion(branch, currentVersion) {
 }
 
 /**
- * Configure git for committing
- * @param {string} token - GitHub token for authentication
+ * Configure git for committing without requiring manual token
  * @param {string} userEmail - Git user email
  * @param {string} userName - Git user name
  */
-async function configureGit(token, userEmail = null, userName = null) {
+async function configureGit(userEmail = null, userName = null) {
   try {
     core.info('Configuring Git for automated commits...');
     
-    // Use provided user config or fallback to multiple options
+    // Use provided user config or fallback to GitHub Actions bot identity
     let userConfigs;
     if (userEmail && userName) {
       userConfigs = [{ email: userEmail, name: userName }];
     } else {
-      // Try multiple user identity approaches for maximum compatibility
+      // Use GitHub Actions bot identity - this works without tokens
       userConfigs = [
-        // Option 1: Simple action identity (your previous working config)
-        { email: 'action@github.com', name: 'GitHub Action Auto-Fix' },
-        // Option 2: GitHub Actions bot identity
+        // GitHub Actions bot identity (most reliable for token-free commits)
         { email: '41898282+github-actions[bot]@users.noreply.github.com', name: 'github-actions[bot]' },
-        // Option 3: Generic noreply identity
+        // Fallback options
+        { email: 'action@github.com', name: 'GitHub Action Auto-Fix' },
         { email: 'noreply@github.com', name: 'GitHub Actions' }
       ];
     }
@@ -37048,57 +37046,10 @@ async function configureGit(token, userEmail = null, userName = null) {
     await execGit(['config', '--local', 'core.autocrlf', 'false'], false);
     await execGit(['config', '--local', 'core.safecrlf', 'false'], false);
     
-    // Configure authentication if token is provided
-    if (token) {
-      const context = github.context;
-      const { owner, repo } = context.repo;
-      
-      // Multiple authentication approaches for maximum compatibility
-      core.info('Setting up Git authentication...');
-      
-      // Method 1: Set remote URL with token (most reliable)
-      const authenticatedUrl = `https://x-access-token:${token}@github.com/${owner}/${repo}.git`;
-      await execGit(['remote', 'set-url', 'origin', authenticatedUrl], true);
-      
-      // Method 2: Configure credential helper (backup approach)
-      try {
-        await execGit(['config', '--local', 'credential.helper', ''], false);
-        await execGit(['config', '--local', 'credential.helper', 'store --file=.git/credentials'], false);
-        
-        // Method 3: Store credentials for the session
-        const credentialsContent = `https://x-access-token:${token}@github.com`;
-        fs.writeFileSync('.git/credentials', credentialsContent, { mode: 0o600 });
-      } catch (credError) {
-        core.warning(`Credential helper setup failed (non-critical): ${credError.message}`);
-      }
-      
-      core.info('Git authentication configured successfully');
-      
-      // Verify authentication with multiple approaches
-      const authTests = [
-        { command: ['ls-remote', '--exit-code', 'origin', 'HEAD'], name: 'ls-remote test' },
-        { command: ['fetch', '--dry-run', 'origin'], name: 'fetch dry-run test' }
-      ];
-      
-      let authVerified = false;
-      for (const test of authTests) {
-        try {
-          await execGit(test.command, false);
-          core.info(`✅ Git authentication verified with ${test.name}`);
-          authVerified = true;
-          break;
-        } catch (authError) {
-          core.warning(`⚠️ ${test.name} failed: ${authError.message}`);
-        }
-      }
-      
-      if (!authVerified) {
-        core.warning('⚠️ Could not verify Git authentication, but proceeding anyway');
-      }
-    } else {
-      core.warning('⚠️ No GitHub token available - Git operations may fail without proper authentication');
-      core.info('💡 Ensure your workflow has the GITHUB_TOKEN available or pass a token explicitly');
-    }
+    // For GitHub Actions, we don't need to configure authentication manually
+    // The GITHUB_TOKEN is automatically available and GitHub handles auth
+    core.info('Git configured for GitHub Actions environment - no manual auth needed');
+    
   } catch (error) {
     core.error(`❌ Failed to configure git: ${error.message}`);
     throw error;
@@ -37106,18 +37057,17 @@ async function configureGit(token, userEmail = null, userName = null) {
 }
 
 /**
- * Commit and push version changes with tag
+ * Commit and push version changes with tag (token-free)
  * @param {string} branch - Target branch
  * @param {string} newVersion - New version
  * @param {string} previousVersion - Previous version
  * @param {string} customMessage - Custom commit message
- * @param {string} token - GitHub token
  * @param {string} userEmail - Git user email
  * @param {string} userName - Git user name
  */
-async function commitAndPush(branch, newVersion, previousVersion, customMessage, token, userEmail, userName) {
+async function commitAndPush(branch, newVersion, previousVersion, customMessage, userEmail, userName) {
   try {
-    await configureGit(token);
+    await configureGit(userEmail, userName);
     
     const commitMessage = customMessage || `🔄 Auto-increment version to ${newVersion}
 
@@ -37161,34 +37111,24 @@ Auto-generated by GitHub Actions
     
     core.info(`🚀 Pushing changes to ${branch}...`);
     
-    // Try multiple push strategies for maximum compatibility
-    let pushSuccess = false;
-    const pushStrategies = [
-      // Strategy 1: Push to specific branch
-      ['push', 'origin', `HEAD:${branch}`],
-      // Strategy 2: Push to current branch
-      ['push', 'origin', 'HEAD'],
-      // Strategy 3: Force push (use with caution)
-      ['push', '--force-with-lease', 'origin', `HEAD:${branch}`]
-    ];
-    
-    for (let i = 0; i < pushStrategies.length; i++) {
+    // GitHub Actions automatically provides authentication via GITHUB_TOKEN
+    // We just need to push normally - no manual token configuration needed
+    try {
+      core.info('Pushing changes to repository...');
+      await execGit(['push', 'origin', `HEAD:${branch}`], true);
+      core.info(`✅ Successfully pushed changes to ${branch}`);
+    } catch (pushError) {
+      // Fallback strategies if the first push fails
+      core.warning(`Initial push failed: ${pushError.message}`);
+      core.info('Trying alternative push strategy...');
+      
       try {
-        core.info(`Attempting push strategy ${i + 1}...`);
-        await execGit(pushStrategies[i], true);
-        pushSuccess = true;
-        core.info(`✅ Push successful with strategy ${i + 1}`);
-        break;
-      } catch (pushError) {
-        core.warning(`❌ Push strategy ${i + 1} failed: ${pushError.message}`);
-        if (i === pushStrategies.length - 1) {
-          throw pushError; // Re-throw the last error if all strategies fail
-        }
+        await execGit(['push', 'origin', 'HEAD'], true);
+        core.info(`✅ Successfully pushed changes using fallback strategy`);
+      } catch (fallbackError) {
+        core.error(`❌ All push strategies failed: ${fallbackError.message}`);
+        throw fallbackError;
       }
-    }
-    
-    if (!pushSuccess) {
-      throw new Error('All push strategies failed');
     }
     
     core.info(`🏷️ Pushing tag ${tagName}...`);
@@ -37236,16 +37176,6 @@ async function run() {
   try {
     // Get inputs
     const branch = core.getInput('branch') || 'main';
-    let token = core.getInput('token');
-    
-    // Auto-detect GitHub token if not explicitly provided
-    if (!token) {
-      token = process.env.GITHUB_TOKEN;
-      if (token) {
-        core.info('🔍 No token input provided, using GITHUB_TOKEN from environment');
-      }
-    }
-    
     const customMessage = core.getInput('commit-message');
     const gitUserEmail = core.getInput('git-user-email');
     const gitUserName = core.getInput('git-user-name');
@@ -37253,16 +37183,7 @@ async function run() {
     
     core.info(`Flutter Version Checker & Auto-Increment Action`);
     core.info(`Checking version in ${pubspecPath} against ${branch} branch...`);
-    
-    // Auto-detect token if not provided
-    if (!token) {
-      core.warning('⚠️ No GitHub token available. Auto-commits will be disabled.');
-      core.info('💡 To enable auto-commits, ensure your workflow has proper permissions:');
-      core.info('   permissions:');
-      core.info('     contents: write');
-    } else {
-      core.info('✅ GitHub token detected - auto-commits enabled');
-    }
+    core.info('✅ Token-free mode - using GitHub Actions built-in authentication');
     
     // Check if pubspec.yaml exists
     if (!fs.existsSync(pubspecPath)) {
@@ -37318,14 +37239,9 @@ async function run() {
       const updatedVersion = getCurrentVersion(pubspecPath);
       core.info(`Updated pubspec.yaml with version: ${updatedVersion}`);
       
-      // Commit and push changes if token is available
-      if (token) {
-        await commitAndPush(branch, newVersion, currentVersion, customMessage, token, gitUserEmail, gitUserName);
-        core.info('✅ Version has been auto-incremented due to reuse and committed.');
-      } else {
-        core.warning('⚠️ Version updated in pubspec.yaml but not committed (no token available)');
-        core.info('💡 The updated version will be committed when you push your changes');
-      }
+      // Commit and push changes using GitHub Actions built-in auth
+      await commitAndPush(branch, newVersion, currentVersion, customMessage, gitUserEmail, gitUserName);
+      core.info('✅ Version has been auto-incremented due to reuse and committed.');
       
       core.info(`The workflow will now continue with the new version: ${newVersion}`);
       
@@ -37360,14 +37276,9 @@ async function run() {
       const updatedVersion = getCurrentVersion(pubspecPath);
       core.info(`Updated pubspec.yaml with version: ${updatedVersion}`);
       
-      // Commit and push changes if token is available
-      if (token) {
-        await commitAndPush(branch, newVersion, previousVersion, customMessage, token, gitUserEmail, gitUserName);
-        core.info('✅ Version has been auto-incremented and committed.');
-      } else {
-        core.warning('⚠️ Version updated in pubspec.yaml but not committed (no token available)');
-        core.info('💡 The updated version will be committed when you push your changes');
-      }
+      // Commit and push changes using GitHub Actions built-in auth
+      await commitAndPush(branch, newVersion, previousVersion, customMessage, gitUserEmail, gitUserName);
+      core.info('✅ Version has been auto-incremented and committed.');
       
       core.info(`The workflow will now continue with the new version: ${newVersion}`);
       

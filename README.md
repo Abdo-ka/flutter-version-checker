@@ -1,8 +1,10 @@
 # Flutter Version Checker & Auto-Increment Action
 
+🎉 **Now 100% Token-Free!** No more authentication headaches - just add `permissions: contents: write` and you're done!
+
 A GitHub Action that automatically checks Flutter version numbers in `pubspec.yaml` against branch history and auto-increments them if needed. This action ensures that each build has a unique, incrementally increasing version number.
 
-## Features
+## ✨ Features
 
 - **🔍 Version History Check**: Scans branch commit history to find previous versions
 - **📈 Auto-Increment**: Automatically increments patch and build numbers when needed
@@ -10,8 +12,42 @@ A GitHub Action that automatically checks Flutter version numbers in `pubspec.ya
 - **🚀 Auto-Commit**: Commits and pushes version changes automatically with tags
 - **📊 Detailed Outputs**: Provides previous, current, and new version information
 - **⚙️ Flexible Configuration**: Customizable branch, pubspec path, and commit messages
-- **🔒 Secure**: Uses GitHub token authentication for safe operations
+- **🆓 Token-Free**: Uses GitHub Actions built-in authentication - no tokens needed!
 - **🏷️ Git Tags**: Automatically creates version tags for releases
+
+## 🚀 Quick Start (Token-Free!)
+
+```yaml
+name: Auto-Version Flutter App
+
+on:
+  push:
+    branches: [ main ]
+
+# Only requirement: write permissions
+permissions:
+  contents: write
+
+jobs:
+  auto-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Auto-increment version
+        uses: Abdo-ka/flutter-version-checker@v1
+        with:
+          branch: main
+          
+      - name: Build Flutter app
+        run: |
+          flutter pub get
+          flutter build apk
+```
+
+That's it! No tokens, no complex setup. Just works! ✨
 
 ## How It Works
 
@@ -23,31 +59,32 @@ A GitHub Action that automatically checks Flutter version numbers in `pubspec.ya
 6. **Creates Tags**: Adds version tags for easy release tracking
 7. **Continues Workflow**: Your CI/CD continues with the corrected version
 
-## Usage
+## 📖 Complete Examples
 
-### Basic Usage
+### Token-Free Usage (Recommended)
 
 ```yaml
-name: Flutter Version Check and Auto-Increment
+name: Flutter CI/CD
 
 on:
   push:
-    branches: [ main, release/*, develop ]
+    branches: [ main, develop ]
+
+permissions:
+  contents: write  # Only requirement!
 
 jobs:
-  version-check:
+  build:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Check and Auto-Increment Flutter Version
-      id: version-check
-      uses: Abdo-ka/flutter-version-checker@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Auto-increment version
+        id: version
+        uses: Abdo-ka/flutter-version-checker@v1
       with:
         branch: ${{ github.ref_name }}
         token: ${{ secrets.GITHUB_TOKEN }}
