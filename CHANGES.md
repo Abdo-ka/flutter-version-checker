@@ -1,5 +1,26 @@
 # Flutter Version Checker - Release History
 
+## v2.0.0 (2025-07-10)
+
+## What's Changed
+
+### Commits since v1.2.3:
+- Release v2.0.0: Zero-config auto-commit and enhanced Git authentication (6449c1d)
+- Auto-update CHANGES.md for v1.2.3 [skip ci] (b2c4c3a)
+
+## Features
+
+## Bug Fixes
+
+## Improvements
+- Release v2.0.0: Zero-config auto-commit and enhanced Git authentication
+- Auto-update CHANGES.md for v1.2.3 [skip ci]
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.2.3...v2.0.0
+
+
+
 ## v1.2.3 (2025-07-10)
 
 ## What's Changed
