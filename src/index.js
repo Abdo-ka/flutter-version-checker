@@ -166,8 +166,8 @@ async function findPreviousVersion(branch, currentVersion) {
       await execGit(['fetch', '--unshallow'], false);
     }
     
-    // Fetch the target branch
-    await execGit(['fetch', 'origin', `${branch}:${branch}`], false);
+    // Fetch the target branch (just update remote references, don't create local branch)
+    await execGit(['fetch', 'origin', branch], false);
     
     core.info(`Searching for previous version in ${branch} branch history...`);
     

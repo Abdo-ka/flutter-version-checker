@@ -29,13 +29,28 @@ function parseFlutterVersion(versionStr) {
 /**
  * Generate next version by incrementing patch and build number
  * @param {string} currentVersion - The current version
+ * @param {string} [previousVersion] - The previous version to compare against
  * @returns {string} - The next version
  */
-function incrementVersion(currentVersion) {
+function incrementVersion(currentVersion, previousVersion = null) {
   const parsed = parseFlutterVersion(currentVersion);
   if (!parsed) return '1.0.0+1';
   
-  // Increment patch version and build number
+  // If we have a previous version, compare to determine increment strategy
+  if (previousVersion) {
+    const prevParsed = parseFlutterVersion(previousVersion);
+    if (prevParsed) {
+      // If patch version has already been incremented, only increment build number
+      if (parsed.patch > prevParsed.patch || 
+          parsed.minor > prevParsed.minor || 
+          parsed.major > prevParsed.major) {
+        const newBuild = parsed.build + 1;
+        return `${parsed.major}.${parsed.minor}.${parsed.patch}+${newBuild}`;
+      }
+    }
+  }
+  
+  // Default behavior: increment patch version and build number
   const newPatch = parsed.patch + 1;
   const newBuild = parsed.build + 1;
   
@@ -86,10 +101,23 @@ function updatePubspecVersion(pubspecPath, newVersion) {
 }
 
 /**
- * Execute a shell command
- * @param {string} command - Command to execute
- * @returns {string} - Command output
+ * Get the previous version from git history
+ * @param {string} pubspecPath - Path to pubspec.yaml
+ * @returns {string|null} - Previous version or null
  */
+function getPreviousVersion(pubspecPath) {
+  try {
+    // Get the previous version of pubspec.yaml from git
+    const gitShow = execCommand('git show HEAD~1:pubspec.yaml');
+    if (!gitShow) return null;
+    
+    const doc = yaml.load(gitShow);
+    return doc.version || null;
+  } catch (error) {
+    console.log('⚠️  Could not retrieve previous version from git history');
+    return null;
+  }
+}
 function execCommand(command) {
   try {
     return execSync(command, { encoding: 'utf8' }).trim();
@@ -149,8 +177,14 @@ function main() {
   
   console.log(`📦 Current version: ${currentVersion}`);
   
+  // Get previous version from git history
+  const previousVersion = getPreviousVersion(pubspecPath);
+  if (previousVersion) {
+    console.log(`📜 Previous version: ${previousVersion}`);
+  }
+  
   // Generate new version
-  const newVersion = incrementVersion(currentVersion);
+  const newVersion = incrementVersion(currentVersion, previousVersion);
   console.log(`📈 New version: ${newVersion}`);
   
   // Update pubspec.yaml
