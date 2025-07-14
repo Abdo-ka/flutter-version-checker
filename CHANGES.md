@@ -1,5 +1,27 @@
 # Flutter Version Checker - Release History
 
+## v2.4.0 (2025-07-14)
+
+## What's Changed
+
+### Commits since v2.3.0:
+- feat: enhance version increment logic to handle pre-incremented versions (3672c0b)
+- Auto-update CHANGES.md for v2.3.0 [skip ci] (9321ae9)
+
+## Features
+- feat: enhance version increment logic to handle pre-incremented versions
+
+## Bug Fixes
+
+## Improvements
+- feat: enhance version increment logic to handle pre-incremented versions
+- Auto-update CHANGES.md for v2.3.0 [skip ci]
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v2.3.0...v2.4.0
+
+
+
 ## v1.2.2 (2025-07-09)
 
 ### 🐛 Bug Fixes
