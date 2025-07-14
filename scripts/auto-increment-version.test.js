@@ -34,14 +34,26 @@ describe('Auto-Increment Version Tests', () => {
   });
 
   describe('incrementVersion', () => {
-    test('should increment patch and build number', () => {
+    test('should increment patch and build number when no previous version', () => {
       expect(incrementVersion('1.0.1+2')).toBe('1.0.2+3');
       expect(incrementVersion('2.1.0+5')).toBe('2.1.1+6');
       expect(incrementVersion('0.0.1+1')).toBe('0.0.2+2');
     });
 
+    test('should only increment build number when patch already incremented', () => {
+      expect(incrementVersion('1.0.7+6', '1.0.6+6')).toBe('1.0.7+7');
+      expect(incrementVersion('2.1.1+3', '2.1.0+5')).toBe('2.1.1+4');
+      expect(incrementVersion('1.1.0+2', '1.0.9+8')).toBe('1.1.0+3');
+    });
+
+    test('should increment patch and build when versions are the same', () => {
+      expect(incrementVersion('1.0.7+6', '1.0.7+6')).toBe('1.0.8+7');
+      expect(incrementVersion('2.1.1+3', '2.1.1+3')).toBe('2.1.2+4');
+    });
+
     test('should handle version without build number', () => {
       expect(incrementVersion('1.0.1')).toBe('1.0.2+1');
+      expect(incrementVersion('1.0.2+0', '1.0.1+5')).toBe('1.0.2+1');
     });
 
     test('should handle invalid input', () => {
@@ -52,6 +64,8 @@ describe('Auto-Increment Version Tests', () => {
     test('should handle edge cases', () => {
       expect(incrementVersion('0.0.0+0')).toBe('0.0.1+1');
       expect(incrementVersion('999.999.999+999')).toBe('999.999.1000+1000');
+      // When major version incremented, only increment build
+      expect(incrementVersion('2.0.0+1', '1.9.9+5')).toBe('2.0.0+2');
     });
   });
 });
