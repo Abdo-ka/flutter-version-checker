@@ -47,7 +47,7 @@ jobs:
     
     - name: Check and Auto-Increment Flutter Version
       id: version-check
-      uses: Abdo-ka/flutter-version-checker@v1
+      uses: Abdo-ka/flutter-version-checker@v2.4.2
       with:
         branch: ${{ github.ref_name }}
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -145,6 +145,56 @@ Previous: 1.0.5+10
 Current:  1.0.3+8
 Result:   Updated to 1.0.6+11
 ```
+
+## Tag-Based Version Bump Tool
+
+In addition to the GitHub Action, this repository includes a powerful **local tag-based version bump tool** that you can use for manual version management:
+
+### Quick Start
+
+```bash
+# Preview what would happen
+./scripts/bump-version.sh --dry-run
+
+# Auto-bump version based on latest tag
+./scripts/bump-version.sh
+
+# Bump specific version type
+./scripts/bump-version.sh --bump-type patch
+
+# Bump and create tag
+./scripts/bump-version.sh --bump-type minor --create-tag
+```
+
+### Features
+
+- 🏷️ **Tag-Aware**: Compares current version with latest git tag
+- 🤖 **Smart Bumping**: Auto-determines appropriate version bump type
+- 🔧 **Multiple Bump Types**: Support for major, minor, patch, and build increments
+- 🔍 **Dry Run Mode**: Preview changes before applying them
+- 📦 **Auto-Tagging**: Optionally create and push git tags
+- ✅ **Validation**: Verifies version changes and provides clear feedback
+
+### Available Commands
+
+```bash
+# Show help
+./scripts/bump-version.sh --help
+
+# Run examples with explanations
+./scripts/examples.sh
+
+# Different bump types
+./scripts/bump-version.sh --bump-type major    # 1.0.3+5 → 2.0.0+1
+./scripts/bump-version.sh --bump-type minor    # 1.0.3+5 → 1.1.0+1
+./scripts/bump-version.sh --bump-type patch    # 1.0.3+5 → 1.0.4+1
+./scripts/bump-version.sh --bump-type build    # 1.0.3+5 → 1.0.3+6
+
+# Force bump even if current version is ahead
+./scripts/bump-version.sh --force --bump-type patch
+```
+
+For detailed documentation, see [TAG_BASED_VERSION_BUMP.md](TAG_BASED_VERSION_BUMP.md).
 
 ## Local Development
 
