@@ -169,6 +169,27 @@ This release fixes the core issue where identical versions were not being proper
 
 ## Latest Changes (v2.2.0)
 
+## v1.0.3 (2025-10-03)
+
+### Changes in this release:
+- Resolve merge conflict and maintain version 2.4.2+1
+- Bump version to 2.4.2+1 for new release
+- Auto-update CHANGES.md for v1.0.3+7 [skip ci]
+- Auto-increment version [skip ci]
+- chore: update generated timestamp in package_config.json and remove auto-increment version workflow
+- Merge branch 'main' of github-personal:Abdo-ka/flutter-version-checker
+- chore: update generated timestamp in package_config.json
+- Build and package updates for version 1.0.3+5
+- Merge branch 'main' of github-personal:Abdo-ka/flutter-version-checker
+- fix: resolve git fetch error when target branch is checked out
+
+### Key Features:
+- Professional Flutter version management
+- Automatic version increment and tagging
+- Branch history validation
+- Seamless CI/CD integration
+
+
 ## v2.3.0 (2025-07-10)
 
 ### Changes in this release:
