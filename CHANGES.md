@@ -1,5 +1,29 @@
 # Flutter Version Checker - Release History
 
+## v1.0.3+7 (2025-10-03)
+
+## What's Changed
+
+### Commits since v1.0.3+5:
+- chore: update generated timestamp in package_config.json and remove auto-increment version workflow (fd055c2)
+- Merge branch 'main' of github-personal:Abdo-ka/flutter-version-checker (e3e21b7)
+- chore: update generated timestamp in package_config.json (5d135a3)
+- Build and package updates for version 1.0.3+5 (08aa6cd)
+
+## Features
+
+## Bug Fixes
+
+## Improvements
+- chore: update generated timestamp in package_config.json and remove auto-increment version workflow
+- chore: update generated timestamp in package_config.json
+- Build and package updates for version 1.0.3+5
+
+---
+**Full Changelog**: https://github.com/Abdo-ka/flutter-version-checker/compare/v1.0.3+5...v1.0.3+7
+
+
+
 ## v2.4.0 (2025-07-14)
 
 ## What's Changed
